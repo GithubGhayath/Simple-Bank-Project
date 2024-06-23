@@ -1,0 +1,183 @@
+CREATE DATABASE Bank;
+
+CREATE TABLE People
+(
+	PersonID INT PRIMARY KEY IDENTITY(1,1),
+	FirstName NVARCHAR(MAX) NOT NULL,
+	MidName NVARCHAR(MAX) NOT NULL,
+	LastName NVARCHAR(MAX) NOT NULL,
+	PhoneNumber NVARCHAR(MAX) NOT NULL,
+	AccountNumber NVARCHAR(MAX) NOT NULL,
+	PINCode NVARCHAR(MAX) NOT NULL,
+	AccountBalance MONEY NOT NULL
+)
+
+CREATE TABLE Clients
+(
+	ClientID INT PRIMARY KEY IDENTITY(1,1),
+	PersonID INT NOT NULL,
+
+	CONSTRAINT FK_PERSONID FOREIGN KEY(PersonID) REFERENCES People(PersonID)
+)
+
+CREATE TABLE Users
+(
+	UserID INT PRIMARY KEY IDENTITY(1,1),
+	UserName NVARCHAR(MAX) NOT NULL,
+	Password NVARCHAR(MAX) NOT NULL,
+	PersonID INT NOT NULL,
+
+	CONSTRAINT FK_PERSONIDD FOREIGN KEY(PersonID) REFERENCES People(PersonID)
+)
+
+
+
+-- This table stores archived changes with the following columns:
+-- - ID: An auto-incremented primary key for each record.
+-- - ClientID: The ID of the client associated with the change.
+-- - UserID: The ID of the user who made the change.
+-- - ChangeDate: The date when the change occurred.
+-- - Detail: A large text field (NVARCHAR(MAX)) to store details about the change.
+
+CREATE TABLE ArchivedChanges
+(
+    ID INT PRIMARY KEY IDENTITY(1,1),
+    ClientID INT NOT NULL,
+    UserID INT NOT NULL,
+    ChangeDate DATE NOT NULL,
+    Detail NVARCHAR(MAX),
+
+    CONSTRAINT FK_ClientID FOREIGN KEY(ClientID) REFERENCES Clients(ClientID),
+    CONSTRAINT FK_UserIDD FOREIGN KEY(UserID) REFERENCES Users(UserID)
+)
+
+
+CREATE TABLE Transfers
+(
+	-- Unique identifier for each transfer process
+	ProcessID INT PRIMARY KEY IDENTITY(1,1),
+	
+	-- Account number from which the amount will be transferred
+	FromAccount NVARCHAR(MAX) NOT NULL,
+	
+	-- Account number to which the amount will be transferred
+	ToAccount NVARCHAR(MAX) NOT NULL,
+	
+	-- The amount of money to be transferred
+	Amount MONEY NOT NULL,
+	
+	-- The date and time when the transfer was made
+	Date DATETIME NOT NULL,
+	
+	-- Balance of the FromAccount after the transfer has been made
+	Balance_1_AfterTransfer MONEY NOT NULL,
+	
+	-- Balance of the ToAccount after the transfer has been made
+	Balance_2_AfterTransfer MONEY NOT NULL,
+	
+	-- The user ID of the person who performed the transfer
+	DoneByUserID INT NOT NULL
+)
+
+
+
+-- Create a new table named Moneywithdrawal to store withdrawal transactions
+CREATE TABLE Moneywithdrawal
+(
+	-- A unique identifier for each record, auto-incremented starting from 1
+	RecordID INT PRIMARY KEY IDENTITY(1,1),
+	
+	-- The ID of the client making the withdrawal, cannot be null
+	ClientID INT NOT NULL,
+	
+	-- The amount of money withdrawn, cannot be null
+	Amount MONEY NOT NULL,
+	
+	-- The date and time when the withdrawal was made, cannot be null
+	WithdrawDate DATETIME NOT NULL
+) 
+
+-- Alter the Moneywithdrawal table to add two new columns
+ALTER TABLE Moneywithdrawal
+ADD 
+	-- The balance before the withdrawal, cannot be null
+	BalanceBeforeWithdraw MONEY NOT NULL,
+	
+	-- The balance after the withdrawal, cannot be null
+    BalanceAfterWithdraw MONEY NOT NULL;
+
+
+
+
+
+
+
+
+-- Create a new table named Deposit to store deposit transactions
+CREATE TABLE Deposit
+(
+	-- A unique identifier for each record, auto-incremented starting from 1
+	RecordID INT PRIMARY KEY IDENTITY(1,1),
+	
+	-- The ID of the client making the deposit, cannot be null
+	ClientID INT NOT NULL,
+	
+	-- The amount of money deposited, cannot be null
+	Amount MONEY NOT NULL,
+	
+	-- The date and time when the deposit was made, cannot be null
+	DepositDate DATETIME NOT NULL,
+	
+	-- The balance before the deposit, cannot be null
+	BalanceBeforDeposit MONEY NOT NULL,
+	
+	-- The balance after the deposit, cannot be null
+	BalanceAfterDeposit MONEY NOT NULL,
+
+	-- A foreign key constraint ensuring ClientID exists in the Clients table
+	CONSTRAINT F_KKCLIENTID FOREIGN KEY(ClientID) REFERENCES Clients(ClientID)
+)
+
+
+
+-- Create a view named 'TransferLog'
+CREATE VIEW TransferLog AS
+SELECT 
+    FromAccount, -- The account number from which the transfer is made
+    SenderName.FillName AS SenderName, -- The full name of the sender, retrieved using a function
+    ToAccount, -- The account number to which the transfer is made
+    ReceiverName.FillName AS ReceiverName, -- The full name of the receiver, retrieved using a function
+    Amount, -- The amount of money transferred
+    Balance_1_AfterTransfer, -- The balance of the sender's account after the transfer
+    Balance_2_AfterTransfer, -- The balance of the receiver's account after the transfer
+    Date  -- The date when the transfer occurred
+FROM 
+    Transfers -- The table that contains transfer records
+CROSS APPLY 
+    dbo.GetClientNameByAccountNumber(FromAccount) AS SenderName -- Apply function to get sender's name by account number
+CROSS APPLY 
+    dbo.GetClientNameByAccountNumber(ToAccount) AS ReceiverName -- Apply function to get receiver's name by account number
+
+
+
+
+
+
+-- Table: CommissionsHistory
+-- Purpose: Stores the history of commission records
+-- Columns:
+--   RecordID: The primary key of the table, an integer that auto-increments starting from 1
+--   Commission: The commission amount, stored as a floating-point number and cannot be null
+--   OnDate: The date and time when the commission was recorded, cannot be null
+
+CREATE TABLE CommissionsHistory
+(
+    -- RecordID is an integer that serves as the primary key and auto-increments with each new record
+    RecordID INT PRIMARY KEY IDENTITY(1,1),
+    
+    -- Commission is a floating-point number representing the commission amount and is required
+    Commission FLOAT NOT NULL,
+    
+    -- OnDate is a datetime value representing when the commission was recorded and is required
+    OnDate DATETIME NOT NULL
+)

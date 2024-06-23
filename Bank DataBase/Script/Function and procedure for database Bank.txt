@@ -1,0 +1,1187 @@
+-- This stored procedure inserts a new person into the People table.
+-- Parameters:
+--   @FirstName: First name of the person.
+--   @MidName: Middle name of the person.
+--   @LastName: Last name of the person.
+--   @PhoneNumber: Phone number of the person.
+--   @AccountNumber: Account number associated with the person.
+--   @PINCODE: PIN code (4 characters) for security.
+--   @ACCOUNTBALANCE: Account balance (money value).
+-- Returns: The identity value of the newly inserted person.
+CREATE PROCEDURE [dbo].[SP_AddNewPerson]
+	@FirstName NVARCHAR(MAX),       -- First name of the person
+	@MidName NVARCHAR(MAX),         -- Middle name (if any)
+	@LastName NVARCHAR(MAX),        -- Last name of the person
+	@PhoneNumber NVARCHAR(MAX),     -- Contact phone number
+	@AccountNumber NVARCHAR(MAX),   -- Account number (financial info?)
+	@PINCODE NVARCHAR(4),           -- Security PIN code
+	@ACCOUNTBALANCE MONEY,          -- Account balance (monetary value)
+	@CreateBy INT                   -- User or process creating the record
+AS
+BEGIN
+	-- Insert a new row into the People table
+	INSERT INTO People
+		VALUES
+		(
+			@FirstName,
+			@MidName,
+			@LastName,
+			@PhoneNumber,
+			@AccountNumber,
+			@PINCode,
+			@AccountBalance,
+			@CreateBy
+		);
+
+	-- Return the identity value of the newly inserted row
+	RETURN SCOPE_IDENTITY();
+END;
+GO
+
+
+
+-- This scalar function checks if a person with the specified PersonID exists.
+-- Parameters:
+--   @PersonID: The PersonID to search for.
+-- Returns:
+--   1 if the person exists, -1 if not found.
+CREATE FUNCTION dbo.IsExistsPerson
+(
+    @PersonID INT
+)
+RETURNS INT
+AS
+BEGIN
+	DECLARE @ISFOUND INT;
+
+	SET @ISFOUND = -1;
+
+	SELECT @ISFOUND = 1 FROM People WHERE PersonID = @PersonID;
+
+	RETURN @ISFOUND;
+END;
+
+
+
+
+-- This stored procedure retrieves a person's information based on their PersonID.
+-- @PERSONID: The input parameter representing the PersonID to search for.
+-- Returns all columns from the People table where the PersonID matches the input value.
+CREATE PROCEDURE SP_FindPersonByID
+	@PERSONID INT
+AS
+BEGIN
+	SELECT * FROM People WHERE PersonID = @PERSONID
+END
+
+
+
+
+CREATE PROCEDURE SP_UpdatePersonInformation
+	@PersonID INT,
+	@FirstName NVARCHAR(MAX),
+	@MidName NVARCHAR(MAX),
+	@LastName NVARCHAR(MAX),
+	@PhoneNumber NVARCHAR(MAX),
+	@AccountNumber NVARCHAR(MAX),
+	@PinCode NVARCHAR(MAX),
+	@AccountBalance MONEY
+AS
+BEGIN
+	-- Update the People table with the provided values
+	UPDATE People
+	SET FirstName = @FirstName, -- Set the first name
+		MidName = @MidName, -- Set the middle name
+		LastName = @LastName, -- Set the last name
+		PhoneNumber = @PhoneNumber, -- Set the phone number
+		AccountNumber = @AccountNumber, -- Set the account number
+		PINCode = @PinCode, -- Set the PIN code
+		AccountBalance = @AccountBalance -- Set the account balance
+	WHERE PersonID = @PersonID; -- Update the row with the specified PersonID
+
+	-- Check if any rows were affected by the update
+	IF @@ROWCOUNT > 0
+	BEGIN
+		RETURN 1; -- Success: Rows updated
+	END
+	ELSE
+	BEGIN
+		RETURN 0; -- Failure: No rows updated
+	END
+END;
+
+
+
+
+
+CREATE PROCEDURE SP_DeletePerson
+	@PersonID INT
+AS
+BEGIN
+	-- Delete the row from the People table with the specified PersonID
+	DELETE FROM People
+	WHERE PersonID = @PersonID;
+
+	-- Check if any rows were affected by the delete operation
+	IF @@ROWCOUNT > 0
+	BEGIN
+		RETURN 1; -- Success: Rows deleted
+	END
+	ELSE
+	BEGIN
+		RETURN 0; -- Failure: No rows deleted
+	END
+END;
+
+
+
+
+
+
+-- This stored procedure inserts a new client into the database.
+-- It takes input parameters for client details and an output parameter for the ClientID.
+
+CREATE PROCEDURE [dbo].[SP_AddNewClient]
+	@FirstName NVARCHAR(MAX),
+	@MidName NVARCHAR(MAX),
+	@LastName NVARCHAR(MAX),
+	@PhoneNumber NVARCHAR(MAX),
+	@AccountNumber NVARCHAR(MAX),
+	@PINCODE NVARCHAR(4),
+	@ACCOUNTBALANCE MONEY,
+	@CreateBy INT,
+	@ClientID INT OUTPUT
+AS
+BEGIN
+		DECLARE @PERSONID INT;
+
+		EXEC @PERSONID = SP_AddNewPerson 
+									@FirstName = @FirstName,
+									@MidName = @MidName,
+									@LastName = @LastName,
+									@PhoneNumber = @PhoneNumber,
+									@AccountNumber = @AccountNumber,
+									@PINCODE = @PINCODE,
+									@ACCOUNTBALANCE = @ACCOUNTBALANCE,
+									@CreateBy = @CreateBy
+
+			
+		INSERT INTO Clients 
+		VALUES (@PERSONID)
+
+		SET @ClientID = SCOPE_IDENTITY();
+END
+GO
+
+
+
+
+CREATE PROCEDURE SP_UpdateClientInfo
+    @ClientID INT,
+    @FirstName NVARCHAR(MAX),
+    @MidName NVARCHAR(MAX),
+    @LastName NVARCHAR(MAX),
+    @PhoneNumber NVARCHAR(MAX),
+    @AccountNumber NVARCHAR(MAX),
+    @PinCode NVARCHAR(MAX),
+    @AccountBalance MONEY
+AS
+BEGIN
+    -- Declare a variable to store the PersonID
+    DECLARE @PersonID INT;
+
+    -- Get the PersonID associated with the ClientID
+    SELECT @PersonID = PersonID FROM Clients WHERE ClientID = @ClientID;
+
+    -- Declare a variable to track whether the update was successful
+    DECLARE @ISUPDATED BIT;
+
+    -- Execute the SP_UpdatePersonINformation stored procedure
+    EXEC @ISUPDATED = SP_UpdatePersonINformation
+        @personID = @PersonID,
+        @FirstName = @FirstName,
+        @MidName = @MidName,
+        @LastName = @LastName,
+        @PhoneNumber = @PhoneNumber,
+        @AccountNumber = @AccountNumber,
+        @PINCODE = @PinCode,
+        @ACCOUNTBALANCE = @AccountBalance;
+
+    -- Return the result of the update (1 for success, 0 for failure)
+    RETURN @ISUPDATED;
+END
+
+
+
+
+CREATE FUNCTION FindClient(@CLIENTID INT)
+RETURNS TABLE
+AS
+RETURN
+(
+    -- Select all columns from the Clients table where ClientID matches the input parameter
+    SELECT * FROM Clients WHERE ClientID = @CLIENTID
+)
+
+
+
+
+
+CREATE PROCEDURE [dbo].[SP_DeleteClient]
+	@CLIENTID INT,
+	@ISDELETED INT OUTPUT
+AS
+	BEGIN
+
+		DECLARE @PERSONID INT;
+
+		SELECT @PERSONID = PersonID FROM Clients WHERE ClientID = @CLIENTID;
+		SET @ISDELETED = 0;
+
+
+		DELETE FROM ArchivedChanges
+		WHERE ClientID = @CLIENTID
+		IF(@@ROWCOUNT >= 1 )
+		BEGIN
+			SET @ISDELETED = @ISDELETED + 1;
+		END
+		DELETE FROM Clients 
+		WHERE ClientID = @CLIENTID;
+
+		IF(@@ROWCOUNT = 1 )
+			BEGIN
+				SET @ISDELETED = @ISDELETED + 1;
+			END
+
+		DELETE FROM People
+		WHERE PersonID = @PERSONID;
+
+		IF(@@ROWCOUNT = 1 )
+			BEGIN
+				SET @ISDELETED = @ISDELETED + 1;
+			END
+
+
+		RETURN @ISDELETED;
+
+	END
+
+
+
+
+
+
+-- Create a view named UsersInformations
+CREATE VIEW UsersInformations AS
+SELECT
+    Users.UserID,                   -- User ID
+    People.PersonID,                -- Person ID
+    CONCAT(People.FirstName, ' ', People.MidName, ' ', People.LastName) AS FullName, -- Full name
+    Users.UserName,                 -- User name
+    Users.Password                  -- User password
+FROM
+    Users
+INNER JOIN
+    People ON Users.PersonID = People.PersonID;
+
+
+
+
+
+-- Create a stored procedure named SP_AddNewUser
+CREATE PROCEDURE SP_AddNewUser
+	@USERNAME NVARCHAR(MAX),   -- User name
+	@PASSWORD NVARCHAR(MAX),   -- User password
+	@PERSONID INT,             -- Person ID (related to the user)
+	@PERMISSIONS INT           -- Permissions (e.g., access level)
+AS
+BEGIN
+	-- Insert a new row into the Users table
+	INSERT INTO Users
+		VALUES (@USERNAME, @PASSWORD, @PERSONID, @PERMISSIONS);
+
+	-- Return the identity value of the newly inserted row
+	RETURN SCOPE_IDENTITY();
+END;
+
+
+
+
+
+
+-- Create a function named dbo.FindUser
+CREATE FUNCTION dbo.FindUser(@USERID INT)
+RETURNS TABLE
+AS RETURN
+(
+    -- Select all columns from the Users table where UserID matches the input @USERID
+    SELECT *
+    FROM Users
+    WHERE UserID = @USERID
+);
+
+
+
+-- Create a stored procedure named SP_UpdateUserInformation
+CREATE PROCEDURE SP_UpdateUserInformation
+	@UserName NVARCHAR(MAX),   -- New user name
+	@Password NVARCHAR(MAX),   -- New user password
+	@Permissions INT,          -- New permissions (e.g., access level)
+	@USERID INT                -- User ID to update
+AS
+BEGIN
+	-- Update the Users table with new values
+	UPDATE Users
+	SET UserName = @UserName, Password = @Password, Permissions = @Permissions
+	WHERE UserID = @USERID;
+
+	-- Check if any rows were affected
+	IF (@@ROWCOUNT > 0)
+		BEGIN
+			RETURN 1; -- Success
+		END
+	ELSE
+		BEGIN
+			RETURN 0; -- No rows updated
+		END
+END;
+
+
+
+
+-- This function checks if a user with the given UserID exists in the USERS table.
+-- If the user exists, it returns 1; otherwise, it returns 0.
+ALTER FUNCTION dbo.IsUserExists(@USERID INT)
+RETURNS BIT
+AS
+BEGIN
+    DECLARE @ISFOUND BIT 
+
+    -- Check if a user with the specified UserID exists
+    SELECT @ISFOUND = CASE
+        WHEN EXISTS (SELECT 1 FROM USERS WHERE UserID = @USERID) THEN 1
+        ELSE 0
+    END
+
+    -- Return the result (1 if user exists, 0 if not)
+    RETURN @ISFOUND
+END
+
+
+
+
+-- This stored procedure inserts a new record into the ArchivedChanges table.
+-- It takes the following parameters:
+-- - @RecordID (OUTPUT): An output parameter that will hold the newly inserted record's ID.
+-- - @ClientID: The ID of the client associated with the change.
+-- - @UserID: The ID of the user who made the change.
+-- - @Details: A large text field (NVARCHAR(MAX)) containing details about the change.
+-- The procedure inserts the current date and time using GETDATE().
+
+CREATE PROCEDURE SP_ArchiveChange
+    @RecordID INT OUTPUT,
+    @ClientID INT,
+    @UserID INT,
+    @Details NVARCHAR(MAX)
+AS
+BEGIN
+    -- Insert the new record into the ArchivedChanges table
+    INSERT INTO ArchivedChanges (ClientID, UserID, ChangeDate, Detail)
+    VALUES (@ClientID, @UserID, GETDATE(), @Details);
+
+    -- Get the ID of the newly inserted record
+    SET @RecordID = SCOPE_IDENTITY();
+END
+
+
+
+
+CREATE FUNCTION dbo.TotalBalance()
+RETURNS MONEY
+AS 
+BEGIN
+    -- Declare a variable to store the total balance
+    DECLARE @TOTAL MONEY;
+
+    -- Calculate the sum of AccountBalance from the People table
+    SELECT @TOTAL = SUM(AccountBalance) FROM People;
+
+    -- Return the total balance
+    RETURN @TOTAL;
+END
+
+
+CREATE VIEW ShowTotalBalances AS
+SELECT
+    AccountNumber,
+    CONCAT(People.FirstName, ' ', People.MidName, ' ', People.LastName) AS FullName,
+    AccountBalance
+FROM People;
+
+
+-- This function searches for a user by their username.
+-- It returns a table containing user records matching the provided username.
+CREATE FUNCTION dbo.FindUserByUserName(@UserName NVARCHAR(MAX))
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT * FROM USERS WHERE UserName = @UserName
+)
+
+
+
+
+--This scalar fucntion for searches for Client By ClientID
+--It Returns a (1 = true) if exists else returns (0 = false)
+
+CREATE FUNCTION dbo.IsClientExists(@ClientID INT)
+RETURNS BIT
+AS 
+	BEGIN
+		DECLARE @ISFOUND INT;
+
+		SELECT @ISFOUND = 1 FROM Clients WHERE ClientID = @ClientID;
+
+		IF @ISFOUND is null
+			BEGIN
+				SET @ISFOUND = 0;
+			END
+
+		RETURN @ISFOUND;
+	END
+
+
+
+
+
+-- Create a table-valued function named dbo.GetUsersActive
+CREATE FUNCTION dbo.GetUsersActive()
+RETURNS @UserActive TABLE (
+    Active INT NOT NULL,
+    UserID INT NOT NULL
+)
+AS
+BEGIN
+    -- Insert active user counts from the People table
+    INSERT INTO @UserActive
+    SELECT COUNT(*) AS Active, CreateBy AS UserID FROM People
+    GROUP BY CreateBy
+    ORDER BY Active DESC;
+
+    -- Insert active user counts from the ArchivedChanges table
+    INSERT INTO @UserActive
+    SELECT COUNT(*) AS Active, UserID FROM ArchivedChanges
+    GROUP BY UserID
+    ORDER BY Active DESC;
+
+    -- Return the populated @UserActive table
+    RETURN;
+END;
+
+
+
+
+CREATE PROCEDURE SP_DeleteUser
+    @UserID INT -- Parameter for the UserID to delete
+AS
+BEGIN
+    DECLARE @ROWAFFECT INT; -- Variable to keep track of the number of rows affected
+    DECLARE @PERSONID INT; -- Variable to store the PersonID associated with the UserID
+
+    SET @ROWAFFECT = 0 -- Initialize @ROWAFFECT to 0
+    SELECT @PERSONID = PersonID from Users WHERE UserID = @UserID -- Retrieve PersonID for the given UserID
+
+    DELETE FROM Users -- Delete the user from the Users table
+    WHERE UserID = @UserID
+
+    IF @@ROWCOUNT>0 -- Check if any row was deleted
+        BEGIN
+            SET @ROWAFFECT = @ROWAFFECT + 1 -- Increment @ROWAFFECT if a row was deleted
+        END
+
+    DELETE FROM People -- Delete the person from the People table
+    WHERE PersonID = @PERSONID
+    IF @@ROWCOUNT>0 -- Check if any row was deleted
+        BEGIN
+            SET @ROWAFFECT = @ROWAFFECT + 1 -- Increment @ROWAFFECT if a row was deleted
+        END
+
+    RETURN @ROWAFFECT -- Return the total number of rows affected
+
+END
+
+
+-- Alter an existing stored procedure named 'SP_AddTransfer'
+ALTER PROCEDURE [dbo].[SP_AddTransfer]
+	@ID INT OUTPUT, -- Output parameter to return the ID of the new transfer
+	@FromAccoutNumber NVARCHAR(MAX), -- Account number to transfer from
+	@ToAccoutNumber NVARCHAR(MAX), -- Account number to transfer to
+	@Amount MONEY  -- The amount of money to transfer
+AS
+	BEGIN
+	-- Declare variables to hold the balance after transfer for both accounts and the client ID who performed the transfer
+	DECLARE @BalanceOneAfterTransfer MONEY;
+	DECLARE @BalanceTwoAfterTransfer MONEY;
+	DECLARE @DoneByClientID INT;
+
+	-- Start a new transaction
+	BEGIN TRANSACTION
+		BEGIN TRY
+			-- Deduct the transfer amount from the sender's account balance
+			UPDATE People
+			SET AccountBalance = AccountBalance - @Amount
+			WHERE AccountNumber = @FromAccoutNumber
+
+			-- Add the transfer amount to the receiver's account balance
+			UPDATE People
+			SET AccountBalance = AccountBalance + @Amount
+			WHERE AccountNumber = @ToAccoutNumber
+
+			-- Retrieve and store the new balance of the sender's account after transfer
+			SELECT @BalanceOneAfterTransfer = AccountBalance FROM People WHERE AccountNumber = @FromAccoutNumber
+			
+			-- Retrieve and store the new balance of the receiver's account after transfer
+			SELECT @BalanceTwoAfterTransfer = AccountBalance FROM People WHERE AccountNumber = @ToAccoutNumber
+			
+			-- Retrieve and store the client ID associated with the sender's account number from the Clients table
+			SELECT @DoneByClientID = ClientID FROM Clients WHERE PersonID = (SELECT PersonID FROM People WHERE AccountNumber = @FromAccoutNumber )
+
+			-- Insert a new record into the Transfers table with all relevant information including client ID
+			INSERT INTO Transfers
+			VALUES (@FromAccoutNumber, @ToAccoutNumber, @Amount, GETDATE(), @BalanceOneAfterTransfer, @BalanceTwoAfterTransfer, @DoneByClientID)
+			
+			-- Set the output parameter with the ID of the new transfer record created using SCOPE_IDENTITY()
+			SET @ID = SCOPE_IDENTITY()
+				
+				COMMIT; -- Commit the transaction if no errors occurred
+			
+			END TRY
+
+		BEGIN CATCH
+			ROLLBACK; -- Rollback the transaction if an error occurred
+		END CATCH
+END
+
+
+
+
+
+CREATE FUNCTION dbo.GetTransactions()
+RETURNS TABLE
+AS
+RETURN(
+	-- Selects all records from the Transfers table
+	SELECT * FROM Transfers
+)
+
+
+
+
+
+
+ALTER PROCEDURE SP_withdraw
+	-- The client ID for whom the withdrawal will be made
+	@ClientID INT,
+	
+	-- The amount of money to withdraw
+	@Amount MONEY
+AS 
+BEGIN
+	-- Declare a variable to check if there is enough money in the account
+	DECLARE @IsThereEnoughMoney BIT;
+	
+	-- Declare a variable to store the balance before withdrawal
+	DECLARE @BalanceBeforWith MONEY;
+
+	-- Initialize the variable as false (0)
+	SET @IsThereEnoughMoney = 0;
+	
+	-- Check if there is enough balance in the account (including a minimum balance of $10)
+	SELECT @IsThereEnoughMoney = 1 FROM People WHERE (AccountBalance >= @Amount + 10 AND PersonID = (SELECT PersonID FROM Clients WHERE ClientID = @ClientID))
+	
+	-- Get the current balance before withdrawal
+	SELECT @BalanceBeforWith = AccountBalance FROM People WHERE  PersonID = (SELECT PersonID FROM Clients WHERE ClientID = @ClientID)
+
+	-- If there is not enough money, return 0 and do not proceed with withdrawal
+	IF @IsThereEnoughMoney <> 1
+		BEGIN
+			RETURN 0;
+		END
+	
+	-- Start a transaction to ensure data integrity
+	BEGIN TRANSACTION
+		BEGIN TRY
+
+			-- Deduct the withdrawal amount from the client's account balance
+			UPDATE People
+			SET AccountBalance = AccountBalance - @Amount
+			WHERE PersonID = (SELECT PersonID FROM Clients WHERE ClientID = @ClientID)
+
+			-- Record the withdrawal transaction in the Moneywithdrawal table
+			INSERT INTO Moneywithdrawal
+			VALUES
+			(@ClientID , @Amount , GETDATE(),
+			@BalanceBeforWith,(SELECT AccountBalance FROM People WHERE  PersonID = (SELECT PersonID FROM Clients WHERE ClientID = @ClientID)))
+			
+			-- If everything is successful, commit the transaction and return 1
+			COMMIT TRANSACTION;
+			RETURN 1;
+			
+		END TRY
+
+		BEGIN CATCH
+			-- If an error occurs, rollback the transaction and return 0
+			ROLLBACK TRANSACTION;
+			RETURN 0;
+		END CATCH
+		
+END
+
+
+
+
+
+
+CREATE PROCEDURE SP_Deposit
+	-- The client ID for whom the deposit will be made
+	@ClientID INT,
+	
+	-- The amount of money to deposit
+	@Amount MONEY
+AS 
+BEGIN
+	-- Declare a variable to store the PersonID associated with the ClientID
+	DECLARE @PERSONID INT;
+	
+	-- Declare a variable to store the balance before deposit
+	DECLARE @BALANCEBEFORDE MONEY;
+
+	-- Retrieve the PersonID for the given ClientID from the Clients table
+	SELECT @PERSONID = PersonID FROM Clients WHERE ClientID = @ClientID
+	
+	-- Retrieve the current account balance for the person from the People table
+	SELECT @BALANCEBEFORDE = AccountBalance FROM People WHERE PersonID = @PERSONID
+
+	-- Update the account balance by adding the deposit amount in the People table
+	UPDATE People 
+	SET AccountBalance = AccountBalance + @Amount
+	WHERE PersonID = @PERSONID
+
+	-- Insert a new record into the Deposit table with the transaction details
+	INSERT INTO Deposit
+	VALUES
+	(@ClientID,@Amount,GETDATE(),@BALANCEBEFORDE,(SELECT AccountBalance FROM People WHERE PersonID = @PERSONID))
+
+	-- Check if a row was affected by the insert operation and return 1 if true
+	IF(@@ROWCOUNT > 0)
+		BEGIN
+			RETURN 1 -- Success indicator
+		END
+		
+END
+
+
+
+
+
+
+-- Function: FindClientByAccountNumberPINCode
+-- Description: Retrieves the ClientID and PERSONID for a client from the Clients and People tables based on the provided Account Number and PIN Code.
+-- Parameters:
+--    @AccountNumber NVARCHAR(MAX): The account number of the client.
+--    @PinCode NVARCHAR(MAX): The PIN code associated with the client's account.
+-- Returns: A table variable with columns ClientID and PERSONID if a match is found.
+
+CREATE FUNCTION dbo.FindClientByAccountNumberPINCode(
+    @AccountNumber NVARCHAR(MAX),
+    @PinCode NVARCHAR(MAX)
+)
+RETURNS @CustomResult TABLE(
+    ClientID INT,
+    PERSONID INT
+)
+AS
+BEGIN
+    -- Declare variables to store ClientID and PERSONID.
+    DECLARE @CID INT;
+    DECLARE @PID INT;
+
+    -- Retrieve PERSONID from People table where AccountNumber and PINCode match the input parameters.
+    SELECT @PID = PERSONID FROM People WHERE AccountNumber = @AccountNumber AND PINCode = @PinCode
+
+    -- Retrieve ClientID from Clients table where PersonID matches the retrieved PERSONID.
+    SELECT @CID = Clients.ClientID FROM Clients WHERE PersonID = @PID
+
+    -- Insert the retrieved ClientID and PERSONID into the table variable.
+    INSERT INTO @CustomResult
+    VALUES
+    (@CID, @PID)
+
+    -- Return the table variable with the results.
+    RETURN;
+END
+
+
+
+
+-- Create a new function named dbo.GetClientNameByAccountNumber
+CREATE FUNCTION dbo.GetClientNameByAccountNumber(@AccountNumber NVARCHAR(MAX))
+RETURNS TABLE 
+AS RETURN(
+    -- Select a concatenated full name from the People table where the account number matches the input parameter
+    SELECT CONCAT(FirstName, ' ', MidName, ' ', LastName) AS FillName 
+    FROM People 
+    WHERE AccountNumber = @AccountNumber
+)
+
+
+
+
+
+-- Altering the stored procedure named SP_AddTransfer
+ALTER PROCEDURE [dbo].[SP_AddTransfer]
+	@ID INT OUTPUT, -- Output parameter to return the ID of the new transfer
+	@FromAccoutNumber NVARCHAR(MAX), -- Account number to transfer from
+	@ToAccoutNumber NVARCHAR(MAX), -- Account number to transfer to
+	@Amount MONEY -- Amount of money to transfer
+AS
+BEGIN
+
+	-- Declare variables to hold the balances after the transfer and the client ID who initiated the transfer
+	DECLARE @BalanceOneAfterTransfer MONEY;
+	DECLARE @BalanceTwoAfterTransfer MONEY;
+	DECLARE @DoneByClientID INT;
+
+	-- Start a new transaction
+	BEGIN TRANSACTION
+		BEGIN TRY
+				
+			-- Deduct the transfer amount from the sender's account balance
+			UPDATE People
+			SET AccountBalance = AccountBalance - @Amount
+			WHERE AccountNumber = @FromAccoutNumber
+
+			-- Add the transfer amount to the receiver's account balance
+			UPDATE People
+			SET AccountBalance = AccountBalance + @Amount
+			WHERE AccountNumber = @ToAccoutNumber
+
+			-- Retrieve and store the new balance of the sender's account after the transfer
+			SELECT @BalanceOneAfterTransfer = AccountBalance FROM People WHERE AccountNumber = @FromAccoutNumber
+
+			-- Retrieve and store the new balance of the receiver's account after the transfer
+			SELECT @BalanceTwoAfterTransfer = AccountBalance FROM People WHERE AccountNumber = @ToAccoutNumber
+
+			-- Retrieve and store the client ID associated with the sender's account number
+			SELECT @DoneByClientID = ClientID FROM Clients WHERE PersonID = (SELECT PersonID FROM People WHERE AccountNumber = @FromAccoutNumber )
+
+			-- Calculate and store the commission for this transaction as 10% of the transfer amount
+			DECLARE @Commission MONEY;
+			SET @Commission = @Amount * 0.10;
+
+			-- Insert a new record into the Transfers table with all relevant information about this transaction
+			INSERT INTO Transfers
+			VALUES (@FromAccoutNumber,@ToAccoutNumber,@Amount,GETDATE(),@BalanceOneAfterTransfer,@BalanceTwoAfterTransfer,@DoneByClientID,@Commission)
+				
+			-- Set the output parameter with the identity value of the newly inserted transfer record
+			SET @ID = SCOPE_IDENTITY()
+					
+			-- Commit the transaction if no errors occurred
+			COMMIT;
+				
+		END TRY
+
+	BEGIN CATCH
+		-- Rollback the transaction if an error occurred during any part of the process
+		ROLLBACK;
+	END CATCH
+
+END -- End of stored procedure definition
+
+
+
+CREATE FUNCTION dbo.GetNumberOfTransferOperationLast_10_DayFromNow()
+RETURNS @Data TABLE(
+						RowID INT PRIMARY KEY IDENTITY(1,1), -- A table with an auto-incrementing primary key
+						NumberOfTransferProcess INT NOT NULL, -- Column to store the count of transfer processes
+						Date DATETIME NOT NULL -- Column to store the date
+				   ) 
+AS
+	BEGIN
+			DECLARE @CurrentDate DATETIME; -- Variable to store the current date
+			DECLARE @NumberOfDay INT; -- Variable to keep track of the number of days
+
+				SET @NumberOfDay = -10; -- Start counting from 10 days ago
+
+	WHILE(@NumberOfDay < 0 ) -- Loop until today's date is reached
+		BEGIN
+			SELECT @CurrentDate = CONVERT(DATE,DATEADD(day, @NumberOfDay, GETDATE())); -- Get the date for @NumberOfDay
+
+			INSERT INTO @Data -- Insert into the table variable
+			SELECT COUNT(*),@CurrentDate FROM Transfers WHERE CONVERT(DATE,Date) = @CurrentDate -- Count transfers for each day
+
+			SET @NumberOfDay = @NumberOfDay + 1 -- Increment the day counter
+		END
+
+		RETURN; -- Return the table variable with the data
+
+	END
+
+
+
+
+CREATE FUNCTION dbo.GetNumberOfWithdrawOperationLast_10_DayFromNow()
+RETURNS @Data TABLE(
+						RowID INT PRIMARY KEY IDENTITY(1,1), -- A table with an auto-incrementing primary key
+						NumberOfWithdraw INT NOT NULL, -- Column to store the count of withdraw operations
+						Date DATETIME NOT NULL -- Column to store the date
+				   ) 
+AS
+	BEGIN
+			DECLARE @CurrentDate DATETIME; -- Variable to store the current date
+			DECLARE @NumberOfDay INT; -- Variable to keep track of the number of days
+
+				SET @NumberOfDay = -10; -- Start counting from 10 days ago
+
+	WHILE(@NumberOfDay < 0 ) -- Loop until today's date is reached
+		BEGIN
+			SELECT @CurrentDate = CONVERT(DATE,DATEADD(day, @NumberOfDay, GETDATE())); -- Get the date for @NumberOfDay
+
+			INSERT INTO @Data -- Insert into the table variable
+			SELECT COUNT(*),@CurrentDate FROM Withdrawals WHERE CONVERT(DATE,WithdrawDate) = @CurrentDate -- Count withdrawals for each day
+
+			SET @NumberOfDay = @NumberOfDay + 1 -- Increment the day counter
+		END
+
+		RETURN; -- Return the table variable with the data
+
+	END
+
+
+
+CREATE FUNCTION dbo.GetNumberOfDepositOperationLast_10_DayFromNow()
+RETURNS @Data TABLE(
+						RowID INT PRIMARY KEY IDENTITY(1,1), -- A table with an auto-incrementing primary key
+						NumberOfDeposit INT NOT NULL, -- Column to store the count of deposit operations
+						Date DATETIME NOT NULL -- Column to store the date
+				   ) 
+AS
+	BEGIN
+			DECLARE @CurrentDate DATETIME; -- Variable to store the current date
+			DECLARE @NumberOfDay INT; -- Variable to keep track of the number of days
+
+				SET @NumberOfDay = -10; -- Start counting from 10 days ago
+
+	WHILE(@NumberOfDay < 0 ) -- Loop until today's date is reached
+		BEGIN
+			SELECT @CurrentDate = CONVERT(DATE,DATEADD(day, @NumberOfDay, GETDATE())); -- Get the date for @NumberOfDay
+
+			INSERT INTO @Data -- Insert into the table variable
+			SELECT COUNT(*),@CurrentDate FROM Deposits WHERE CONVERT(DATE,DepositDate) = @CurrentDate -- Count deposits for each day
+
+			SET @NumberOfDay = @NumberOfDay + 1 -- Increment the day counter
+		END
+
+		RETURN; -- Return the table variable with the data
+
+	END
+
+
+
+-- Function: dbo.CalclulateCommission
+-- Purpose: Calculates the total commission from the Transfers table
+-- Returns: The total commission as a FLOAT data type
+CREATE FUNCTION dbo.CalclulateCommission()
+RETURNS FLOAT
+AS
+BEGIN
+    -- Declare a variable to store the sum of commissions
+    DECLARE @Commi FLOAT;
+
+    -- Calculate the sum of all commission values in the Transfers table
+    -- and store the result in the @Commi variable
+    SELECT @Commi = SUM(Commission) FROM Transfers
+
+    -- Return the total commission value
+    RETURN @Commi;
+END
+
+
+
+
+-- Stored Procedure: SP_StoreCommission
+-- Purpose: Inserts a commission record into the CommissionsHistory table
+-- Parameters:
+--   @Commission: The commission amount to be stored
+
+CREATE PROCEDURE SP_StoreCommission
+    @Commission FLOAT -- The commission amount passed as a parameter
+AS
+BEGIN
+    -- Insert a new record into CommissionsHistory with the provided commission and current date/time
+    INSERT INTO CommissionsHistory(Commission, OnDate) 
+    VALUES(@Commission, GETDATE()) -- GETDATE() fetches the current system date and time
+END
+
+
+
+-- Function: dbo.CalculateAVGOfCommissionLast_10_DaysFromNow
+-- Purpose: Calculates the average of the maximum commission values from the last 10 days
+-- Returns: The average as a FLOAT data type
+
+ALTER FUNCTION dbo.CalculateAVGOfCommissionLast_10_DaysFromNow()
+RETURNS FLOAT
+AS
+BEGIN
+    -- Declare variables to store total commissions, number of days, and other required values
+    DECLARE @TOTAL FLOAT;
+    DECLARE @NUMBEROFDAYS INT;
+    DECLARE @MAXCOMMISSIONONCURRENTDATE FLOAT;
+    DECLARE @CURRENTDATE DATETIME;
+    DECLARE @SUMOFMAXCOMMISSIONS FLOAT;
+    DECLARE @VALUEWILLRETURNAVG FLOAT;
+
+    -- Initialize the sum of maximum commissions to zero
+    SET @SUMOFMAXCOMMISSIONS = 0.0;
+
+    -- Set the number of days to look back from the current date
+    SET @NUMBEROFDAYS = -10;
+
+    -- Loop through each day from the last 10 days
+    WHILE(@NUMBEROFDAYS < 0)
+        BEGIN
+            -- Calculate the date for the current iteration and store it in @CURRENTDATE
+            SET @CURRENTDATE = CAST(DATEADD(day, @NUMBEROFDAYS, GETDATE()) AS DATE);
+            
+            -- Retrieve the maximum commission for the current date and store it in @MAXCOMMISSIONONCURRENTDATE
+            SELECT @MAXCOMMISSIONONCURRENTDATE = MAX(Commission) FROM CommissionsHistory WHERE CAST(OnDate AS DATE) = @CURRENTDATE
+            
+            -- If a maximum commission value exists for the current date, add it to the sum of maximum commissions
+            IF @MAXCOMMISSIONONCURRENTDATE IS NOT NULL
+                BEGIN
+                    SET @SUMOFMAXCOMMISSIONS = @SUMOFMAXCOMMISSIONS +  @MAXCOMMISSIONONCURRENTDATE;
+                END
+
+            -- Move to the next day
+            SET @NUMBEROFDAYS = @NUMBEROFDAYS + 1;
+        END
+
+    -- Calculate the average of the maximum commissions over the last 10 days
+    SET @VALUEWILLRETURNAVG = @SUMOFMAXCOMMISSIONS / 10;
+    
+    -- Return the calculated average value
+    RETURN @VALUEWILLRETURNAVG;
+END
+
+
+
+-- Function: CalculateSUMOfCommissionLast_10_DaysFromNow
+-- Returns the sum of the maximum commission values from the CommissionsHistory table for the last 10 days.
+CREATE FUNCTION dbo.CalculateSUMOfCommissionLast_10_DaysFromNow()
+RETURNS FLOAT
+AS
+BEGIN
+		-- Declare variables to hold the total sum, number of days to look back, 
+		-- maximum commission on the current date being checked, current date, and sum of maximum commissions.
+		DECLARE @TOTAL FLOAT;
+		DECLARE @NUMBEROFDAYS INT;
+		DECLARE @MAXCOMMISSIONONCURRENTDATE FLOAT;
+		DECLARE @CURRENTDATE DATETIME;
+		DECLARE @SUMOFMAXCOMMISSIONS FLOAT;
+
+		-- Initialize the sum of maximum commissions to zero.
+		SET @SUMOFMAXCOMMISSIONS = 0.0;
+		-- Set the number of days to look back from today. Negative value indicates past days.
+		SET @NUMBEROFDAYS = -10;
+
+		-- Loop through each day from 10 days ago up until yesterday.
+		WHILE(@NUMBEROFDAYS < 0)
+			BEGIN
+					-- Calculate the date to check by adding the number of days to today's date and casting it as DATE type.
+					SET @CURRENTDATE = CAST(DATEADD(day, @NUMBEROFDAYS, GETDATE()) AS DATE);
+					
+					-- Select the maximum commission value for the current date being checked.
+					SELECT @MAXCOMMISSIONONCURRENTDATE = MAX(Commission) FROM CommissionsHistory WHERE CAST(OnDate AS DATE) = @CURRENTDATE
+					
+					-- If a maximum commission value exists for the current date, add it to the sum of maximum commissions.
+					IF @MAXCOMMISSIONONCURRENTDATE IS NOT NULL
+						BEGIN
+							SET @SUMOFMAXCOMMISSIONS = @SUMOFMAXCOMMISSIONS +  @MAXCOMMISSIONONCURRENTDATE;
+						END
+					-- Increment the number of days to move to the next day.
+					SET @NUMBEROFDAYS = @NUMBEROFDAYS + 1;
+			END
+
+		
+		
+		-- Return the total sum of maximum commissions calculated over the last 10 days.
+		RETURN @SUMOFMAXCOMMISSIONS;
+END
+
+
+
+CREATE PROCEDURE SP_DownTransferOrUp
+    @LastValueAdded INT OUTPUT, -- Output parameter to store the last value added
+    @TheSecondLastValueAdded INT OUTPUT -- Output parameter to store the second last value added
+AS
+BEGIN
+    -- Selects the most recent (last) NumberOfTransferProcess value from the function's result
+    SELECT TOP 1 @LastValueAdded = NumberOfTransferProcess 
+    FROM dbo.GetNumberOfTransferOperationLast_10_DayFromNow()
+    ORDER BY Date DESC -- Orders by Date in descending order to get the most recent record on top
+    
+    -- Selects the second most recent (second last) NumberOfTransferProcess value from the function's result
+    SELECT @TheSecondLastValueAdded = NumberOfTransferProcess 
+    FROM dbo.GetNumberOfTransferOperationLast_10_DayFromNow()
+    ORDER BY Date DESC -- Orders by Date in descending order
+    OFFSET 1 ROWS FETCH NEXT 1 ROWS ONLY; -- Skips the first row and fetches the next one, which is the second last record
+
+END
+
+
+
+-- Function: CalculateWithdrawalLast_10_Days
+-- Returns the total number of withdrawals made in the last 10 days.
+CREATE FUNCTION dbo.CalculateWithdrawalLast_10_Days()
+RETURNS INT
+AS
+BEGIN
+    -- Declare a variable to store the count of withdrawals
+    DECLARE @NUMBEROFWITHDRAWAL INT;
+
+    -- Calculate the count of withdrawals within the specified date range
+    SELECT @NUMBEROFWITHDRAWAL = COUNT(*)
+    FROM Moneywithdrawal
+    WHERE CAST(WithdrawDate AS DATE) BETWEEN CAST(DATEADD(DAY, -10, GETDATE()) AS DATE) AND CAST(GETDATE() AS DATE);
+
+    -- Return the total number of withdrawals
+    RETURN @NUMBEROFWITHDRAWAL;
+END
+
+
+-- Function: CalculateDepositLast_10_Days
+-- Returns the total number of deposits made in the last 10 days.
+CREATE FUNCTION dbo.CalculateDepositLast_10_Days()
+RETURNS INT
+AS
+BEGIN
+    -- Declare a variable to store the count of deposits
+    DECLARE @NUMBEROFDeposit INT;
+
+    -- Calculate the count of deposits within the specified date range
+    SELECT @NUMBEROFDeposit = COUNT(*)
+    FROM Deposit
+    WHERE CAST(DepositDate AS DATE) BETWEEN CAST(DATEADD(DAY, -10, GETDATE()) AS DATE) AND CAST(GETDATE() AS DATE);
+
+    -- Return the total number of deposits
+    RETURN @NUMBEROFDeposit;
+END
+
+
+
+-- This function returns a table containing the top 6 clients who made the most transfers.
+CREATE FUNCTION dbo.GetTheTop6ClientsDoTransfers()
+RETURNS TABLE
+AS
+RETURN
+(
+    -- Select the top 6 clients based on the number of transfers they initiated.
+    SELECT TOP 6
+        R1.NumberOfTransfers,
+        -- Retrieve the full name of the client associated with the FromAccount.
+        (SELECT CONCAT(People.FirstName, ' ', People.MidName, ' ', People.LastName)
+         FROM People
+         WHERE AccountNumber = R1.FromAccount) AS FullName
+    FROM
+    (
+        -- Count the number of transfers for each FromAccount.
+        SELECT COUNT(*) AS NumberOfTransfers, FromAccount
+        FROM Transfers
+        GROUP BY FromAccount
+    ) R1
+    ORDER BY R1.NumberOfTransfers DESC
+);
+
+
+
+
+-- This function returns a table containing withdrawal statistics for the top 6 clients.
+CREATE FUNCTION dbo.GetTheTop6ClientsDoWithdrawal()
+RETURNS TABLE
+AS
+RETURN
+(
+    -- Select the number of withdrawals and the client's full name.
+    SELECT
+        R1.NUMBEROFWITHDRAWAL,
+        (SELECT CONCAT(People.FirstName, ' ', People.MidName, ' ', People.LastName)
+         FROM People
+         WHERE PersonID = (SELECT PersonID FROM Clients WHERE ClientID = R1.ClientID)) AS CLIENTNAME
+    FROM
+    (
+        -- Count the number of withdrawals for each client.
+        SELECT COUNT(*) AS NUMBEROFWITHDRAWAL, ClientID
+        FROM Moneywithdrawal
+        GROUP BY ClientID
+    ) R1
+    ORDER BY R1.NUMBEROFWITHDRAWAL DESC
+    OFFSET 0 ROWS
+);
+
+
+-- This function returns a table containing deposit statistics for the top 6 clients.
+CREATE FUNCTION dbo.GetTheTop6ClientsDoDeposit()
+RETURNS TABLE
+AS
+RETURN
+(
+    -- Select the number of deposits and the client's full name.
+    SELECT
+        R1.NUMBEROFDEPOSIT,
+        (SELECT CONCAT(People.FirstName, ' ', People.MidName, ' ', People.LastName)
+         FROM People
+         WHERE PersonID = (SELECT PersonID FROM Clients WHERE ClientID = R1.ClientID)) AS CLIENTNAME
+    FROM
+    (
+        -- Count the number of deposits for each client.
+        SELECT COUNT(*) AS NUMBEROFDEPOSIT, ClientID
+        FROM Deposit
+        GROUP BY ClientID
+    ) R1
+    ORDER BY R1.NUMBEROFDEPOSIT DESC
+    OFFSET 0 ROWS
+);
+
+
+
+--The procedure will get all currencies 
+CREATE PROCEDURE dbo.GetCurrencies
+AS 
+	BEGIN		
+
+			DECLARE @ColumnName NVARCHAR(MAX);
+			DECLARE @CurrentDate DATE = GETDATE();
+			SET @ColumnName = 'Value_In_'+CAST(@CurrentDate AS NVARCHAR);
+
+			DECLARE @sql NVARCHAR(MAX);
+
+			SET @sql = N'SELECT CurrencyCode , ' + QUOTENAME(@ColumnName) + 'FROM Currencies';
+
+			EXEC sp_executesql @sql;
+
+	END
+
+
+
+
+--This function Find Currency based on CurrencyCode
+CREATE FUNCTION dbo.GetCurrencyByCode(@CurrencyCode NVARCHAR(MAX))
+RETURNS TABLE
+AS RETURN (
+				SELECT * FROM Currencies WHERE CurrencyCode = @CurrencyCode
+		  )
+
+
+			SELECT [Value_In_2024-06-21] FROM dbo.GetCurrencyByCode('MCOIN')
+
