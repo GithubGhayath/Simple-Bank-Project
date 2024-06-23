@@ -4,9 +4,9 @@ Welcome to the Awesome Banking System repository! This project is designed to st
 
 ### Features:
 #### 1. User Management Screen:
-Seamlessly manage users, including account creation and modification.
-Integrated card operations for efficient card issuance and transaction oversight.
-Powered by the sleek Guna UI framework.
+* Seamlessly manage users, including account creation and modification.
+* Integrated card operations for efficient card issuance and transaction oversight.
+* Powered by the sleek Guna UI framework.
 #### 2. Customer Screen:
 View and interact with client details effortlessly.
 Perform actions such as adding, deleting, and modifying client information.
